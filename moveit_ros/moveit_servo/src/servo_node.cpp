@@ -101,6 +101,22 @@ ServoNode::ServoNode(const rclcpp::NodeOptions& options)
   // primary planning scene monitor (e.g. move_group)
   if (servo_parameters->is_primary_planning_scene_monitor)
     planning_scene_monitor_->providePlanningSceneService();
+  // Start the servoing loop
+  servo_loop_thread_ = std::thread(&ServoNode::servoLoop, this);
+
+  servo_->setCommandType(static_cast<CommandType>(1));
+}
+
+void ServoNode::pauseServo(const std::shared_ptr<std_srvs::srv::SetBool::Request>& request,
+                           const std::shared_ptr<std_srvs::srv::SetBool::Response>& response)
+{
+  servo_paused_ = request->data;
+  response->success = (servo_paused_ == request->data);
+  if (servo_paused_)
+  {
+    servo_->setCollisionChecking(false);
+    response->message = "Servoing disabled";
+  }
   else
     planning_scene_monitor_->requestPlanningSceneState();
 
